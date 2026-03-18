@@ -1,0 +1,7 @@
+{
+  "mappings": [
+    "/content/summit-trt/:/",
+    "/content/summit-trt/metadata:/metadata.json",
+    "/content/summit-trt/configuration:/.helix/config.json"
+  ]
+}
