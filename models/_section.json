@@ -33,6 +33,10 @@
             {
               "name": "Highlight",
               "value": "highlight"
+            },
+            {
+              "name": "tabs",
+              "value": "tabs"
             }
           ]
         }

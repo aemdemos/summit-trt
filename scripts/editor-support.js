@@ -23,8 +23,10 @@ function getState(block) {
     const [currentPanel] = block.querySelectorAll('.tabs-panel[aria-hidden="false"]');
     return currentPanel?.dataset.aueResource;
   }
-
-  return null;
+  return {
+    expandedGroups: [...block.querySelectorAll('.nested-blocks-group[aria-expanded="true"]')]
+      .map((group) => group.dataset.aueResource),
+  };
 }
 
 function setState(block, state) {
@@ -44,6 +46,13 @@ function setState(block, state) {
       block.querySelectorAll('.tabs-list button')[index]?.click();
     }
   }
+  if (!state?.expandedGroups?.length) return;
+
+  block.querySelectorAll('.nested-blocks-group').forEach((group) => {
+    if (state.expandedGroups.includes(group.dataset.aueResource)) {
+      group.setAttribute('aria-expanded', 'true');
+    }
+  });
 }
 /* eslint-disable sonarjs/cognitive-complexity */
 async function applyChanges(event) {
@@ -156,6 +165,13 @@ function handleSelection(event) {
     if (block && block.matches('.tabs')) {
       setState(block, element.dataset.aueResource);
     }
+    // Expand parent group if selecting an item within a collapsed group
+    const parentGroup = element.closest('.nested-blocks-group');
+    if (parentGroup && parentGroup.getAttribute('aria-expanded') !== 'true') {
+      parentGroup.setAttribute('aria-expanded', 'true');
+    }
+
+    element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }
 

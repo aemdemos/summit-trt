@@ -219,12 +219,26 @@ export function decorateButtons(main) {
   });
 }
 
+export function autoblockNestedBlocks(main) {
+  main.querySelectorAll(':scope > div').forEach((section) => {
+    // Detect sections that should become example-nested-blocks
+    // Adapt this condition to your content pattern
+    const hasNestedContent = section.querySelector('.nested-group');
+    if (!hasNestedContent) return;
+
+    // Add section metadata to trigger the section type
+    section.dataset.sectionStatus = 'initialized';
+    section.classList.add('nested-blocks-container');
+  });
+}
+
 /**
  * Decorates all sections in a container element.
  * @param {Element} main The container element
  */
 /* eslint-disable sonarjs/cognitive-complexity */
 export function decorateSections(main) {
+  autoblockNestedBlocks(main);
   const sectionEls = main.querySelectorAll(':scope > div');
   const sectionLimit = Math.min(sectionEls.length, MAX_SECTIONS);
   for (let si = 0; si < sectionLimit; si += 1) {
