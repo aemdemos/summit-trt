@@ -1,0 +1,72 @@
+/* Section title: scoped to main; sizes use global heading tokens; tone maps to site color tokens */
+
+main .section-title {
+  margin: 0;
+  padding: 0;
+}
+
+main .section-title.size-xxl .title,
+main .section-title.subtitle-size-xxl .subtitle {
+  font-size: var(--heading-font-size-xxl);
+}
+
+main .section-title.size-xl .title,
+main .section-title.subtitle-size-xl .subtitle {
+  font-size: var(--heading-font-size-xl);
+}
+
+main .section-title.size-l .title,
+main .section-title.subtitle-size-l .subtitle {
+  font-size: var(--heading-font-size-l);
+}
+
+main .section-title.size-m .title,
+main .section-title.subtitle-size-m .subtitle {
+  font-size: var(--heading-font-size-m);
+}
+
+main .section-title.size-s .title,
+main .section-title.subtitle-size-s .subtitle {
+  font-size: var(--heading-font-size-s);
+}
+
+main .section-title.size-xs .title,
+main .section-title.subtitle-size-xs .subtitle {
+  font-size: var(--heading-font-size-xs);
+}
+
+main .section-title.section-title-tone-muted .title,
+main .section-title.section-title-tone-muted .subtitle {
+  color: var(--dark-color);
+}
+
+main .section-title.section-title-tone-accent .title,
+main .section-title.section-title-tone-accent .subtitle {
+  color: var(--link-color);
+}
+
+main .section-title .title:has(.icon),
+main .section-title .subtitle:has(.icon) {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25em;
+}
+
+main .section-title .icon {
+  flex-shrink: 0;
+  height: 1em;
+  width: 1em;
+  vertical-align: middle;
+}
+
+main .section-title .icon img {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+main .section-title.center { text-align: center; }
+main .section-title.right { text-align: right; }
+main .section-title.left { text-align: left; }

@@ -83,6 +83,7 @@ module.exports = {
     // Below are rules for AEM Crosswalk component model definitions, see https://www.aem.live/developer/component-model-definitions#type-inference
     'xwalk/max-cells': ['error', {
       section: 30, // section is a key-value block and over 4 is OK
+      'section-title': 10, // title, types, sizes, alignment, tone, subtitle fields
     }],
     'xwalk/no-custom-resource-types': 0, // da won't have them
     // it's 2026, we can afford to have longer lines
