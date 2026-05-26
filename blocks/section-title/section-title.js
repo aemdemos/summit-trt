@@ -379,6 +379,23 @@ function allowlistedTextColorFromClassList(block) {
   return fromLegacy ? LEGACY_TONE_TO_COLOR_CLASS[fromLegacy] : '';
 }
 
+/**
+ * UE may add the dropdown value as a bare class on the block (`.section-title.link`)
+ * rather than embedding it in row 5 or `section-title-color-*`; map those to canonical classes.
+ */
+function bareTextColorTokenFromBlockClasses(block) {
+  const list = [...block.classList];
+  const key = TEXT_COLOR_VAR_KEYS.find((k) => list.includes(k));
+  return key ? `section-title-color-${key}` : '';
+}
+
+function initialTextColorFromBlock(block) {
+  return (
+    allowlistedTextColorFromClassList(block)
+    || bareTextColorTokenFromBlockClasses(block)
+  );
+}
+
 function renderSectionTitle(block, state) {
   const keepAlign = normalizeAlignment(state.alignVal);
   const keepSize = hasValue(state.titleSizeClass) ? state.titleSizeClass : '';
@@ -405,6 +422,7 @@ function renderSectionTitle(block, state) {
     'subtitle-size-s',
     'subtitle-size-xs',
     ...TEXT_COLOR_VAR_KEYS.map((k) => `section-title-color-${k}`),
+    ...TEXT_COLOR_VAR_KEYS,
     'section-title-tone-text',
     'section-title-tone-muted',
     'section-title-tone-accent',
@@ -435,7 +453,7 @@ function renderSectionTitle(block, state) {
 }
 
 export default function decorate(block) {
-  const initialTextColor = allowlistedTextColorFromClassList(block);
+  const initialTextColor = initialTextColorFromBlock(block);
   const tableConfig = readBlockConfig(block) ?? {};
   const rows = Array.from(block.querySelectorAll(':scope > div'));
   const mergedConfig = configFromSingleColumnRows(rows, tableConfig);
