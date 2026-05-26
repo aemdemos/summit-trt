@@ -47,6 +47,13 @@
 
   /* fixed-width / code */
   --fixed-font-family: 'Roboto Mono', menlo, consolas, monospace;
+
+  /* dark section band (scoped on .section.dark; inherits to children using these tokens) */
+  --section-dark-background: #1a1a2e;
+  --section-dark-foreground: #f8f8f8;
+  --section-dark-muted: #c4c8d4;
+  --section-dark-link: #a8c4ff;
+  --section-dark-link-hover: #d4e0ff;
 }
 
 /* fallback fonts */
@@ -264,10 +271,23 @@ main > .section:first-of-type {
   }
 }
 
-/* section metadata */
+/* section metadata — classes come from section metadata “Style” (comma-separated → one class each) */
 main .section.light,
 main .section.highlight {
   background-color: var(--light-color);
+  margin: 0;
+  padding: 40px 0;
+}
+
+main .section.dark {
+  --text-color: var(--section-dark-foreground);
+  --background-color: var(--section-dark-background);
+  --dark-color: var(--section-dark-muted);
+  --link-color: var(--section-dark-link);
+  --link-hover-color: var(--section-dark-link-hover);
+
+  background-color: var(--section-dark-background);
+  color: var(--section-dark-foreground);
   margin: 0;
   padding: 40px 0;
 }

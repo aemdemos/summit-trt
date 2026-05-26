@@ -1,5 +1,5 @@
 /**
- * Section title: semantic heading + optional subtitle, with size, alignment, and tone.
+ * Section title: semantic heading + optional subtitle, with size, alignment, and token-based text color.
  * Supports a legacy 4-row table (title row, title size, subtitle row, subtitle size) and
  * key/value rows from readBlockConfig (UE/DA). Legacy imports: parseFromId() reads optional
  * heading id fragments (---) from migrated content only.
@@ -10,12 +10,31 @@ import { moveInstrumentation } from '../../scripts/scripts.js';
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, p';
 const HEADING_TAGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p'];
 const ALIGNMENTS = ['left', 'center', 'right'];
-/** Allowlist for block `classes` (tone); avoids arbitrary class injection */
-const ALLOWED_TONE_CLASSES = new Set([
+
+/**
+ * Default tokens = :root colors in styles/styles.css (--{key}-color, except link-hover → --link-hover-color).
+ * To add a site token: append the key here, add `section-title-color-{key}` in section-title.css, and add a select option in block models.
+ */
+const TEXT_COLOR_VAR_KEYS = [
+  'background',
+  'light',
+  'dark',
+  'text',
+  'link',
+  'link-hover',
+];
+
+const ALLOWED_TEXT_COLOR_CLASSES = new Set([
   '',
-  'section-title-tone-muted',
-  'section-title-tone-accent',
+  ...TEXT_COLOR_VAR_KEYS.map((k) => `section-title-color-${k}`),
 ]);
+
+/** Older authored values / classes map to token-based colors */
+const LEGACY_TONE_TO_COLOR_CLASS = {
+  'section-title-tone-text': 'section-title-color-text',
+  'section-title-tone-muted': 'section-title-color-dark',
+  'section-title-tone-accent': 'section-title-color-link',
+};
 
 const SIZE_MAP = new Map([
   ['xxl', 'size-xxl'],
@@ -26,10 +45,17 @@ const SIZE_MAP = new Map([
   ['xs', 'size-xs'],
 ]);
 
+function normalizeAlignment(val) {
+  if (!val || typeof val !== 'string') return '';
+  const a = val.trim().toLowerCase();
+  return ALIGNMENTS.includes(a) ? a : '';
+}
+
 function normalizeSize(val) {
   if (!val || typeof val !== 'string') return '';
   const n = val.trim().toLowerCase();
   if (!n) return '';
+  if (ALIGNMENTS.includes(n)) return '';
   const mapped = SIZE_MAP.get(n);
   if (mapped) return mapped;
   if (n.startsWith('size-')) return n;
@@ -44,9 +70,37 @@ function cellText(row) {
   return (col?.textContent ?? '').trim();
 }
 
+/**
+ * DA / Franklin key–value table rows often have two columns: label | authored value.
+ * Headings/text must be read only from the value column so we never pick `<p>Title</p>` labels.
+ */
+function valueColumnScope(row) {
+  if (!row) return row;
+  if (typeof row.matches === 'function' && row.matches('.section-title')) {
+    return row;
+  }
+  if (!row.children?.length) return row;
+  if (row.children.length === 2) return row.children[1];
+  return row.children[0];
+}
+
 function get(config, ...keys) {
   const v = keys.reduce((acc, k) => acc ?? config[k], undefined);
   return typeof v === 'string' ? v.trim() : '';
+}
+
+/** First authoring key that resolves (DA labels → readBlockConfig keys). */
+function getTextColorRawFromConfig(config) {
+  return get(
+    config,
+    'classes',
+    'tone',
+    'text-color',
+    'textcolor',
+    'text-colour',
+    'colour',
+    'color',
+  );
 }
 
 function hasValue(s) {
@@ -76,7 +130,8 @@ function parseFromId(id) {
 }
 
 function getHeadingFromCell(cell, existingHeading = null) {
-  const heading = existingHeading ?? cell?.querySelector?.(HEADING_SELECTOR);
+  const scope = valueColumnScope(cell);
+  const heading = existingHeading ?? scope?.querySelector?.(HEADING_SELECTOR);
   if (heading) {
     return {
       text: (heading.textContent ?? '').trim(),
@@ -101,6 +156,59 @@ function createTitleElement(tag, className, text, id, sourceEl) {
   return el;
 }
 
+function normalizeTextColorClass(raw) {
+  if (!raw || typeof raw !== 'string') return '';
+  const t = raw.trim();
+  if (!t) return '';
+  const lowerFull = t.toLowerCase();
+  if (LEGACY_TONE_TO_COLOR_CLASS[lowerFull]) return LEGACY_TONE_TO_COLOR_CLASS[lowerFull];
+  if (ALLOWED_TEXT_COLOR_CLASSES.has(lowerFull)) return lowerFull;
+  const compact = lowerFull.replace(/\s+/g, '');
+  const withoutPrefix = compact.replace(/^section-title-color-/, '');
+  if (TEXT_COLOR_VAR_KEYS.includes(withoutPrefix)) {
+    return `section-title-color-${withoutPrefix}`;
+  }
+  if (withoutPrefix === 'linkhover' || compact === 'hover') {
+    return 'section-title-color-link-hover';
+  }
+  const lower = lowerFull;
+  if (lower === 'muted' || lower === 'secondary') return 'section-title-color-dark';
+  if (lower === 'accent') return 'section-title-color-link';
+  if (lower === 'body' || lower === 'primary') return 'section-title-color-text';
+  return '';
+}
+
+/**
+ * Cells that wrapTextNodes() turns into <p>; those must not be mistaken for subtitle rows.
+ * Match only tight tokens (not prose) so real subtitle paragraphs are found.
+ */
+function isStrictAlignToken(raw) {
+  if (!hasValue(raw)) return false;
+  return /^(left|center|right)$/i.test(raw.trim());
+}
+
+function isStrictSizeToken(raw) {
+  if (!hasValue(raw)) return false;
+  return /^(size-)?(xxl|xl|l|m|s|xs)$/i.test(raw.trim());
+}
+
+/** Title/subtitle *type* fields often store a lone h1–p token in a cell. */
+function isHeadingLevelOrParagraphTypeToken(raw) {
+  if (!hasValue(raw)) return false;
+  return /^(h[1-6]|p)$/i.test(raw.trim());
+}
+
+function isMetadataRow(row) {
+  if (!row?.children?.length) return true;
+  const raw = cellText(row);
+  if (!hasValue(raw)) return true;
+  if (normalizeTextColorClass(raw)) return true;
+  if (isStrictAlignToken(raw)) return true;
+  if (isStrictSizeToken(raw)) return true;
+  if (isHeadingLevelOrParagraphTypeToken(raw)) return true;
+  return false;
+}
+
 function readTitleFromRows(rows, block) {
   const state = {
     titleText: '',
@@ -112,7 +220,8 @@ function readTitleFromRows(rows, block) {
   };
   const legacyFour = rows.length > 0 && rows.length <= 4;
   const titleSource = rows.length >= 1 ? rows[0] : block;
-  const titleHeadingEl = titleSource?.querySelector?.(HEADING_SELECTOR);
+  const titleSearchRoot = valueColumnScope(titleSource);
+  const titleHeadingEl = titleSearchRoot?.querySelector?.(HEADING_SELECTOR) ?? null;
   state.titleHeadingEl = titleHeadingEl;
   const titleInfo = getHeadingFromCell(titleSource, titleHeadingEl);
   if (!hasValue(titleInfo.text) && !titleHeadingEl) return state;
@@ -128,6 +237,8 @@ function readTitleFromRows(rows, block) {
   if (legacyFour && rows.length >= 2) {
     state.titleSizeClass = normalizeSize(cellText(rows[1])) || state.titleSizeClass;
   }
+  if (!state.alignVal && fromId.alignment) state.alignVal = fromId.alignment;
+  if (!state.titleSizeClass && fromId.sizeClass) state.titleSizeClass = fromId.sizeClass;
   return state;
 }
 
@@ -139,25 +250,25 @@ function readSubtitleFromRows(rows, block) {
     subHeadingEl: null,
   };
   const legacyFour = rows.length > 0 && rows.length <= 4;
-  if (legacyFour && rows.length >= 3) {
-    state.subHeadingEl = rows[2]?.querySelector?.(HEADING_SELECTOR) ?? null;
+  /** Old 4-row *doc* table: row1 title size, row2 subtitle, row3 subtitle size — not DA rows (type | title size | alignment). */
+  let legacyConsumedSubtitleRow = false;
+  if (legacyFour && rows.length >= 3 && !isMetadataRow(rows[2])) {
+    const subScope = valueColumnScope(rows[2]);
+    state.subHeadingEl = subScope?.querySelector?.(HEADING_SELECTOR) ?? null;
     const sub = getHeadingFromCell(rows[2], state.subHeadingEl);
     if (hasValue(sub.text) || state.subHeadingEl) {
+      legacyConsumedSubtitleRow = true;
       state.subtitleText = sub.text;
       state.subtitleTag = sub.tag;
     }
   }
-  if (legacyFour && rows.length >= 4) state.subtitleSizeClass = normalizeSize(cellText(rows[3]));
+  if (legacyFour && rows.length >= 4 && legacyConsumedSubtitleRow) {
+    state.subtitleSizeClass = normalizeSize(cellText(rows[3]));
+  }
   if (rows.length === 0 && hasValue(block.getAttribute?.('data-subtitle'))) {
     state.subtitleText = block.getAttribute('data-subtitle');
   }
   return state;
-}
-
-function normalizeToneClass(raw) {
-  if (!raw || typeof raw !== 'string') return '';
-  const t = raw.trim();
-  return ALLOWED_TONE_CLASSES.has(t) ? t : '';
 }
 
 function applyConfig(state, config) {
@@ -169,14 +280,15 @@ function applyConfig(state, config) {
   if (hasValue(cfg('title-size', 'titleSize'))) {
     state.titleSizeClass = normalizeSize(cfg('title-size', 'titleSize'));
   }
-  const alignField = cfg('alignment');
-  if (ALIGNMENTS.includes(alignField)) state.alignVal = alignField;
-  const classesField = cfg('classes');
-  const tone = normalizeToneClass(classesField);
-  if (tone) {
-    state.toneClass = tone;
-  } else if (!state.alignVal && ALIGNMENTS.includes(classesField)) {
-    state.alignVal = classesField;
+  const alignField = normalizeAlignment(cfg('alignment'));
+  if (alignField) state.alignVal = alignField;
+  const classesField = getTextColorRawFromConfig(config);
+  const textColor = normalizeTextColorClass(classesField);
+  if (textColor) {
+    state.textColorClass = textColor;
+  } else if (!state.alignVal) {
+    const classesAsAlign = normalizeAlignment(classesField);
+    if (classesAsAlign) state.alignVal = classesAsAlign;
   }
   if (hasValue(cfg('subtitle'))) state.subtitleText = cfg('subtitle');
   const sType = validTag(cfg('subtitle-type', 'subtitleType'));
@@ -186,11 +298,94 @@ function applyConfig(state, config) {
   }
 }
 
+/**
+ * First row after title (index ≥1) that is not a metadata/tuning cell.
+ * wrapTextNodes() adds <p> inside cells, so we must not use querySelector('p') alone.
+ */
+function findSubtitleRowIndex(rows) {
+  let ri = 1;
+  while (ri < rows.length) {
+    if (!isMetadataRow(rows[ri])) {
+      return ri;
+    }
+    ri += 1;
+  }
+  return -1;
+}
+
+function applyTitleMetaScan(rows, fromIdx, untilIdx, cfg) {
+  let haveTitleSize = hasValue(get(cfg, 'title-size', 'titleSize'));
+  let haveAlign = hasValue(normalizeAlignment(String(cfg.alignment ?? '')));
+  let haveTextColor = hasValue(normalizeTextColorClass(getTextColorRawFromConfig(cfg)));
+  let ri = fromIdx;
+  while (ri < untilIdx) {
+    const raw = cellText(rows[ri]);
+    if (hasValue(raw)) {
+      const color = normalizeTextColorClass(raw);
+      const align = normalizeAlignment(raw);
+      const size = normalizeSize(raw);
+      if (!haveTextColor && color) {
+        cfg.classes = raw.trim();
+        haveTextColor = true;
+      } else if (!haveTitleSize && size) {
+        cfg['title-size'] = raw;
+        haveTitleSize = true;
+      } else if (!haveAlign && align) {
+        cfg.alignment = align;
+        haveAlign = true;
+      }
+    }
+    ri += 1;
+  }
+}
+
+function applySubtitleScan(rows, subIdx, cfg) {
+  if (subIdx < 0) return;
+  const subRow = rows[subIdx];
+  if (!subRow) return;
+  const subScope = valueColumnScope(subRow);
+  const subEl = subScope?.querySelector?.(HEADING_SELECTOR);
+  const subInfo = getHeadingFromCell(subRow, subEl);
+  if (!hasValue(cfg.subtitle) && (hasValue(subInfo.text) || subEl)) {
+    cfg.subtitle = subInfo.text;
+    if (validTag(subInfo.tag)) {
+      cfg.subtitleType = subInfo.tag;
+    }
+  }
+  let ri = subIdx + 1;
+  while (ri < rows.length && !hasValue(get(cfg, 'subtitle-size', 'subtitleSize'))) {
+    const raw = cellText(rows[ri]);
+    if (hasValue(raw) && normalizeSize(raw)) {
+      cfg['subtitle-size'] = raw;
+    }
+    ri += 1;
+  }
+}
+
+function configFromSingleColumnRows(rows, tableConfig) {
+  const cfg = { ...tableConfig };
+  const subIdx = findSubtitleRowIndex(rows);
+  const metaEnd = subIdx >= 0 ? subIdx : rows.length;
+  applyTitleMetaScan(rows, 1, metaEnd, cfg);
+  applySubtitleScan(rows, subIdx, cfg);
+  return cfg;
+}
+
+function allowlistedTextColorFromClassList(block) {
+  const list = [...block.classList];
+  const fromNew = list.find((c) => ALLOWED_TEXT_COLOR_CLASSES.has(c) && c);
+  if (fromNew) return fromNew;
+  const fromLegacy = list.find((c) => LEGACY_TONE_TO_COLOR_CLASS[c]);
+  return fromLegacy ? LEGACY_TONE_TO_COLOR_CLASS[fromLegacy] : '';
+}
+
 function renderSectionTitle(block, state) {
-  const keepAlign = ALIGNMENTS.includes(state.alignVal) ? state.alignVal : '';
+  const keepAlign = normalizeAlignment(state.alignVal);
   const keepSize = hasValue(state.titleSizeClass) ? state.titleSizeClass : '';
   const keepSubSize = hasValue(state.subtitleSizeClass) ? state.subtitleSizeClass : '';
-  const keepTone = state.toneClass && ALLOWED_TONE_CLASSES.has(state.toneClass) ? state.toneClass : '';
+  const keepTextColor = state.textColorClass && ALLOWED_TEXT_COLOR_CLASSES.has(state.textColorClass)
+    ? state.textColorClass
+    : '';
 
   block.replaceChildren();
   block.classList.remove(
@@ -209,6 +404,8 @@ function renderSectionTitle(block, state) {
     'subtitle-size-m',
     'subtitle-size-s',
     'subtitle-size-xs',
+    ...TEXT_COLOR_VAR_KEYS.map((k) => `section-title-color-${k}`),
+    'section-title-tone-text',
     'section-title-tone-muted',
     'section-title-tone-accent',
   );
@@ -223,7 +420,7 @@ function renderSectionTitle(block, state) {
   block.appendChild(titleEl);
   if (keepSize) block.classList.add(keepSize);
   if (keepAlign) block.classList.add(keepAlign);
-  if (keepTone) block.classList.add(keepTone);
+  if (keepTextColor) block.classList.add(keepTextColor);
   if (!hasValue(state.subtitleText)) return;
 
   const subEl = createTitleElement(
@@ -238,17 +435,26 @@ function renderSectionTitle(block, state) {
 }
 
 export default function decorate(block) {
-  const config = readBlockConfig(block) ?? {};
+  const initialTextColor = allowlistedTextColorFromClassList(block);
+  const tableConfig = readBlockConfig(block) ?? {};
   const rows = Array.from(block.querySelectorAll(':scope > div'));
-  const legacySlice = rows.slice(0, 4);
-  const titleState = readTitleFromRows(legacySlice, block);
-  const subtitleState = readSubtitleFromRows(legacySlice, block);
+  const mergedConfig = configFromSingleColumnRows(rows, tableConfig);
+  const titleState = readTitleFromRows(rows, block);
+  const subtitleState = readSubtitleFromRows(rows, block);
   const state = {
     ...titleState,
     ...subtitleState,
-    toneClass: '',
+    textColorClass: '',
   };
-  applyConfig(state, config);
+  applyConfig(state, mergedConfig);
+  if (!state.subHeadingEl) {
+    const si = findSubtitleRowIndex(rows);
+    if (si >= 0) {
+      const subVs = valueColumnScope(rows[si]);
+      state.subHeadingEl = subVs?.querySelector?.(HEADING_SELECTOR) ?? null;
+    }
+  }
+  if (initialTextColor && !state.textColorClass) state.textColorClass = initialTextColor;
   if (!hasValue(state.titleText) && !state.titleHeadingEl) return;
   renderSectionTitle(block, state);
 }
