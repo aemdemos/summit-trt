@@ -6,6 +6,7 @@
       "model": "section-title",
       "plugins": {
         "da": {
+          "unsafeHTML": "<div class=\"section-title\"><div><div></div></div><div><div></div></div><div><div></div></div><div><div></div></div><div><div></div></div><div><div></div></div><div><div></div></div><div><div></div></div></div>",
           "rows": 8,
           "columns": 1,
           "fields": [

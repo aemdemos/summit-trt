@@ -138,6 +138,10 @@
             "value": "highlight"
           },
           {
+            "name": "Dark",
+            "value": "dark"
+          },
+          {
             "name": "tabs",
             "value": "tabs"
           }
