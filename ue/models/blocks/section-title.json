@@ -194,102 +194,90 @@
           ]
         },
         {
-          "component": "select",
-          "name": "subtitle-option",
-          "label": "Subtitle",
-          "value": "",
-          "valueType": "string",
-          "description": "Choose whether to include a subtitle below the title.",
-          "options": [
+          "component": "container",
+          "name": "optional-subtitle",
+          "label": "Subtitle (optional)",
+          "collapsible": true,
+          "collapsed": true,
+          "fields": [
             {
-              "name": "None",
-              "value": ""
+              "component": "text",
+              "name": "subtitle",
+              "label": "Subtitle text",
+              "valueType": "string"
             },
             {
-              "name": "Include subtitle",
-              "value": "yes"
-            }
-          ]
-        },
-        {
-          "component": "text",
-          "name": "subtitle",
-          "label": "Subtitle text",
-          "valueType": "string",
-          "condition": { "===": [{ "var": "subtitle-option" }, "yes"] }
-        },
-        {
-          "component": "select",
-          "name": "subtitleType",
-          "label": "Subtitle type",
-          "valueType": "string",
-          "condition": { "===": [{ "var": "subtitle-option" }, "yes"] },
-          "options": [
-            {
-              "name": "h1",
-              "value": "h1"
+              "component": "select",
+              "name": "subtitleType",
+              "label": "Subtitle type",
+              "valueType": "string",
+              "options": [
+                {
+                  "name": "h1",
+                  "value": "h1"
+                },
+                {
+                  "name": "h2",
+                  "value": "h2"
+                },
+                {
+                  "name": "h3",
+                  "value": "h3"
+                },
+                {
+                  "name": "h4",
+                  "value": "h4"
+                },
+                {
+                  "name": "h5",
+                  "value": "h5"
+                },
+                {
+                  "name": "h6",
+                  "value": "h6"
+                },
+                {
+                  "name": "p",
+                  "value": "p"
+                }
+              ]
             },
             {
-              "name": "h2",
-              "value": "h2"
-            },
-            {
-              "name": "h3",
-              "value": "h3"
-            },
-            {
-              "name": "h4",
-              "value": "h4"
-            },
-            {
-              "name": "h5",
-              "value": "h5"
-            },
-            {
-              "name": "h6",
-              "value": "h6"
-            },
-            {
-              "name": "p",
-              "value": "p"
-            }
-          ]
-        },
-        {
-          "component": "select",
-          "name": "subtitle-size",
-          "label": "Subtitle size",
-          "value": "",
-          "valueType": "string",
-          "condition": { "===": [{ "var": "subtitle-option" }, "yes"] },
-          "options": [
-            {
-              "name": "Default (from type)",
-              "value": ""
-            },
-            {
-              "name": "XXL",
-              "value": "size-xxl"
-            },
-            {
-              "name": "XL",
-              "value": "size-xl"
-            },
-            {
-              "name": "L",
-              "value": "size-l"
-            },
-            {
-              "name": "M",
-              "value": "size-m"
-            },
-            {
-              "name": "S",
-              "value": "size-s"
-            },
-            {
-              "name": "XS",
-              "value": "size-xs"
+              "component": "select",
+              "name": "subtitle-size",
+              "label": "Subtitle size",
+              "value": "",
+              "valueType": "string",
+              "options": [
+                {
+                  "name": "Default (from type)",
+                  "value": ""
+                },
+                {
+                  "name": "XXL",
+                  "value": "size-xxl"
+                },
+                {
+                  "name": "XL",
+                  "value": "size-xl"
+                },
+                {
+                  "name": "L",
+                  "value": "size-l"
+                },
+                {
+                  "name": "M",
+                  "value": "size-m"
+                },
+                {
+                  "name": "S",
+                  "value": "size-s"
+                },
+                {
+                  "name": "XS",
+                  "value": "size-xs"
+                }
+              ]
             }
           ]
         }
