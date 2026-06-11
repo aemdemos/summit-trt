@@ -198,20 +198,6 @@ function isHeadingLevelOrParagraphTypeToken(raw) {
   return /^(h[1-6]|p)$/i.test(raw.trim());
 }
 
-/** UE subtitle toggle (`subtitle-option` select) persists `yes` in a table cell when enabled. */
-function isStrictSubtitleOptionToken(raw) {
-  if (!hasValue(raw)) return false;
-  return /^yes$/i.test(raw.trim());
-}
-
-function configHasSubtitleOption(config) {
-  return Object.hasOwn(config, 'subtitle-option') || Object.hasOwn(config, 'subtitleOption');
-}
-
-function isSubtitleEnabledInConfig(config) {
-  return get(config, 'subtitle-option', 'subtitleOption').toLowerCase() === 'yes';
-}
-
 function isMetadataRow(row) {
   if (!row?.children?.length) return true;
   const raw = cellText(row);
@@ -220,7 +206,6 @@ function isMetadataRow(row) {
   if (isStrictAlignToken(raw)) return true;
   if (isStrictSizeToken(raw)) return true;
   if (isHeadingLevelOrParagraphTypeToken(raw)) return true;
-  if (isStrictSubtitleOptionToken(raw)) return true;
   return false;
 }
 
@@ -304,12 +289,6 @@ function applyConfig(state, config) {
   } else if (!state.alignVal) {
     const classesAsAlign = normalizeAlignment(classesField);
     if (classesAsAlign) state.alignVal = classesAsAlign;
-  }
-  if (configHasSubtitleOption(config) && !isSubtitleEnabledInConfig(config)) {
-    state.subtitleText = '';
-    state.subtitleSizeClass = '';
-    state.subHeadingEl = null;
-    return;
   }
   if (hasValue(cfg('subtitle'))) state.subtitleText = cfg('subtitle');
   const sType = validTag(cfg('subtitle-type', 'subtitleType'));
