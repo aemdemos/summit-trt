@@ -88,16 +88,30 @@
           ]
         },
         {
+          "component": "select",
+          "name": "subtitle-option",
+          "label": "Subtitle",
+          "value": "",
+          "valueType": "string",
+          "description": "Choose whether to include a subtitle below the title.",
+          "options": [
+            { "name": "None", "value": "" },
+            { "name": "Include subtitle", "value": "yes" }
+          ]
+        },
+        {
           "component": "text",
           "name": "subtitle",
-          "label": "Subtitle (optional)",
-          "valueType": "string"
+          "label": "Subtitle text",
+          "valueType": "string",
+          "condition": { "===": [{ "var": "subtitle-option" }, "yes"] }
         },
         {
           "component": "select",
           "name": "subtitleType",
           "label": "Subtitle type",
           "valueType": "string",
+          "condition": { "===": [{ "var": "subtitle-option" }, "yes"] },
           "options": [
             { "name": "h1", "value": "h1" },
             { "name": "h2", "value": "h2" },
@@ -114,6 +128,7 @@
           "label": "Subtitle size",
           "value": "",
           "valueType": "string",
+          "condition": { "===": [{ "var": "subtitle-option" }, "yes"] },
           "options": [
             { "name": "Default (from type)", "value": "" },
             { "name": "XXL", "value": "size-xxl" },
